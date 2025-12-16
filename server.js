@@ -137,6 +137,7 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
     const projectPath = path.join(PROJECTS_DIR, req.params.projectName);
     const files = await fs.readdir(projectPath);
     const conversations = [];
+    const includeWarmup = req.query.includeWarmup === 'true';
 
     for (const file of files) {
       if (file.endsWith('.jsonl')) {
@@ -146,6 +147,40 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
         const lines = content.trim().split('\n').filter(line => line);
 
         let firstUserMessage = null;
+        let isWarmup = false;
+        let isSidechain = false;
+
+        // First pass: check for sidechain flag and warmup message
+        for (const line of lines) {
+          try {
+            const entry = JSON.parse(line);
+
+            // Check for sidechain flag
+            if (entry.isSidechain === true) {
+              isSidechain = true;
+            }
+
+            // Look for first user message to check for warmup
+            if (!isWarmup && entry.type === 'user' && entry.message && entry.message.content) {
+              const content = typeof entry.message.content === 'string'
+                ? entry.message.content
+                : entry.message.content[0]?.text || '';
+              // Check if it's a warmup message
+              if (content === 'Warmup') {
+                isWarmup = true;
+              }
+            }
+          } catch (e) {
+            // Skip malformed lines
+          }
+        }
+
+        // Skip warmup conversations unless explicitly requested
+        if ((isWarmup || isSidechain) && !includeWarmup) {
+          continue;
+        }
+
+        // Second pass: get first user message for preview (skip tool_result messages)
         for (const line of lines) {
           try {
             const entry = JSON.parse(line);
@@ -169,7 +204,9 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
           preview: firstUserMessage || 'No preview available',
           messageCount: lines.length,
           modified: stats.mtime,
-          size: stats.size
+          size: stats.size,
+          isWarmup: isWarmup,
+          isSidechain: isSidechain
         });
       }
     }

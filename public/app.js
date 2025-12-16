@@ -2,11 +2,13 @@ let currentProject = null;
 let currentConversation = null;
 let allProjects = [];
 let allConversations = [];
+let showWarmup = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadProjects();
   setupSearchHandlers();
+  setupWarmupToggle();
 });
 
 // Load all projects
@@ -57,7 +59,8 @@ async function selectProject(projectName) {
     '<div class="loading">Loading conversations...</div>';
 
   try {
-    const response = await fetch(`/api/projects/${projectName}/conversations`);
+    const url = `/api/projects/${projectName}/conversations${showWarmup ? '?includeWarmup=true' : ''}`;
+    const response = await fetch(url);
     allConversations = await response.json();
     renderConversations(allConversations);
   } catch (error) {
@@ -78,9 +81,11 @@ function renderConversations(conversations) {
   container.innerHTML = conversations.map(conv => {
     const date = new Date(conv.modified).toLocaleString();
     const size = formatSize(conv.size);
+    const warmupClass = conv.isWarmup ? ' warmup-conversation' : '';
+    const warmupBadge = conv.isWarmup ? '<span class="warmup-badge">WARMUP</span>' : '';
     return `
-      <div class="conversation-item" data-id="${conv.id}" onclick="selectConversation('${conv.id}')">
-        <div class="preview">${escapeHtml(conv.preview)}</div>
+      <div class="conversation-item${warmupClass}" data-id="${conv.id}" onclick="selectConversation('${conv.id}')">
+        <div class="preview">${warmupBadge}${escapeHtml(conv.preview)}</div>
         <div class="meta">${date} • ${conv.messageCount} msgs • ${size}</div>
       </div>
     `;
@@ -121,7 +126,16 @@ function renderConversation(messages) {
 
   viewer.innerHTML = messages.map(msg => {
     const timestamp = new Date(msg.timestamp).toLocaleString();
-    const role = msg.message?.role || msg.type;
+    let role = msg.message?.role || msg.type;
+
+    // Detect tool result messages (they have type="user" but contain tool_result content)
+    if (role === 'user' && Array.isArray(msg.message?.content)) {
+      const hasOnlyToolResults = msg.message.content.every(item => item.type === 'tool_result');
+      if (hasOnlyToolResults) {
+        role = 'tool_result';
+      }
+    }
+
     return `
       <div class="message ${role}">
         <div class="message-header">
@@ -178,6 +192,17 @@ function renderMessageContent(message) {
   }
 
   return escapeHtml(JSON.stringify(content, null, 2));
+}
+
+// Setup warmup toggle
+function setupWarmupToggle() {
+  const toggle = document.getElementById('warmup-toggle');
+  toggle.addEventListener('change', (e) => {
+    showWarmup = e.target.checked;
+    if (currentProject) {
+      selectProject(currentProject);
+    }
+  });
 }
 
 // Setup search handlers
