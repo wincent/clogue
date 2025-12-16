@@ -10,16 +10,121 @@ const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 
 app.use(express.static('public'));
 
+// Reconstruct the actual filesystem path from the encoded directory name
+async function reconstructPath(dirName, homeDir) {
+  // Remove leading dash and split into parts
+  const parts = dirName.replace(/^-/, '').split('-');
+
+  // Start building path from root
+  let currentPath = '';
+  let pathComponents = [];
+  let i = 0;
+
+  // Handle /Users/username pattern (username may contain dots)
+  if (parts[0] === 'Users' && parts.length > 2) {
+    // Try username with dot: Users/first.last
+    const possibleUsername = parts[1] + '.' + parts[2];
+    if (homeDir === `/Users/${possibleUsername}`) {
+      currentPath = homeDir;
+      pathComponents.push('Users', possibleUsername);
+      i = 3;
+    } else {
+      // Fall back to regular handling
+      currentPath = '/Users';
+      pathComponents.push('Users');
+      i = 1;
+    }
+  } else {
+    currentPath = '/' + parts[0];
+    pathComponents.push(parts[0]);
+    i = 1;
+  }
+
+  // Walk through remaining parts, checking filesystem to determine actual structure
+  while (i < parts.length) {
+    let found = false;
+
+    // Try dot-separated combination first (e.g., github + com = github.com)
+    if (i + 1 < parts.length) {
+      const dotCandidate = parts[i] + '.' + parts[i + 1];
+      const testPath = path.join(currentPath, dotCandidate);
+
+      try {
+        await fs.access(testPath);
+        // Dot-separated path exists on disk
+        currentPath = testPath;
+        pathComponents.push(dotCandidate);
+        i += 2;
+        found = true;
+      } catch (e) {
+        // Dot-separated doesn't exist, continue with dash combinations
+      }
+    }
+
+    // Try increasingly longer dash-separated combinations
+    if (!found) {
+      for (let j = i; j < parts.length; j++) {
+        const candidate = parts.slice(i, j + 1).join('-');
+        const testPath = path.join(currentPath, candidate);
+
+        try {
+          await fs.access(testPath);
+          // Path exists, use it
+          currentPath = testPath;
+          pathComponents.push(candidate);
+          i = j + 1;
+          found = true;
+          break;
+        } catch (e) {
+          // Path doesn't exist, try longer combination
+        }
+      }
+    }
+
+    if (!found) {
+      // Path doesn't exist on disk, fall back to treating each part as separate
+      pathComponents.push(parts[i]);
+      currentPath = path.join(currentPath, parts[i]);
+      i++;
+    }
+  }
+
+  return {
+    fullPath: currentPath,
+    components: pathComponents
+  };
+}
+
 // List all projects
 app.get('/api/projects', async (req, res) => {
   try {
     const entries = await fs.readdir(PROJECTS_DIR, { withFileTypes: true });
-    const projects = entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => ({
-        name: entry.name,
-        displayName: entry.name.replace(/-/g, '/').replace(/^\//, '')
-      }));
+    const homeDir = os.homedir();
+    const projects = await Promise.all(
+      entries
+        .filter(entry => entry.isDirectory())
+        .map(async (entry) => {
+          const { fullPath, components } = await reconstructPath(entry.name, homeDir);
+
+          // Get project name (last component)
+          const projectName = components[components.length - 1];
+
+          // Get parent path components (domain patterns already handled in reconstructPath)
+          const parentComponents = components.slice(0, -1);
+
+          // Build the parent path
+          const parentPath = '/' + parentComponents.join('/');
+          const displayParentPath = parentPath.startsWith(homeDir)
+            ? '~' + parentPath.substring(homeDir.length)
+            : parentPath;
+
+          return {
+            name: entry.name,
+            projectName: projectName,
+            parentPath: displayParentPath
+          };
+        })
+    );
     res.json(projects);
   } catch (error) {
     res.status(500).json({ error: error.message });

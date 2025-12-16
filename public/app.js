@@ -32,7 +32,8 @@ function renderProjects(projects) {
 
   container.innerHTML = projects.map(project => `
     <div class="project-item" data-name="${project.name}" onclick="selectProject('${project.name}')">
-      <div class="name">${project.displayName}</div>
+      <div class="project-name">${escapeHtml(project.projectName)}</div>
+      <div class="project-path">${escapeHtml(project.parentPath)}</div>
     </div>
   `).join('');
 }
@@ -184,7 +185,8 @@ function setupSearchHandlers() {
   document.getElementById('project-search').addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase();
     const filtered = allProjects.filter(p =>
-      p.displayName.toLowerCase().includes(query)
+      p.projectName.toLowerCase().includes(query) ||
+      p.parentPath.toLowerCase().includes(query)
     );
     renderProjects(filtered);
   });

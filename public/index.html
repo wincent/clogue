@@ -82,9 +82,20 @@
       border-color: #667eea;
     }
 
-    .project-item .name {
-      font-weight: 500;
-      word-break: break-all;
+    .project-item .project-name {
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .project-item .project-path {
+      font-size: 0.8rem;
+      opacity: 0.6;
+      margin-top: 0.25rem;
+      word-break: break-word;
+    }
+
+    .project-item.active .project-path {
+      opacity: 0.8;
     }
 
     .conversation-item .preview {
