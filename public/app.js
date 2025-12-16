@@ -3,13 +3,14 @@ let currentConversation = null;
 let allProjects = [];
 let allConversations = [];
 let showWarmup = false;
+let showMeta = false;
 let currentMessages = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadProjects();
   setupSearchHandlers();
-  setupWarmupToggle();
+  setupFilterToggles();
 });
 
 // Load all projects
@@ -60,7 +61,10 @@ async function selectProject(projectName) {
     '<div class="loading">Loading conversations...</div>';
 
   try {
-    const url = `/api/projects/${projectName}/conversations${showWarmup ? '?includeWarmup=true' : ''}`;
+    const params = new URLSearchParams();
+    if (showWarmup) params.append('includeWarmup', 'true');
+    if (showMeta) params.append('includeMeta', 'true');
+    const url = `/api/projects/${projectName}/conversations${params.toString() ? '?' + params.toString() : ''}`;
     const response = await fetch(url);
     allConversations = await response.json();
     renderConversations(allConversations);
@@ -82,11 +86,14 @@ function renderConversations(conversations) {
   container.innerHTML = conversations.map(conv => {
     const date = new Date(conv.modified).toLocaleString();
     const size = formatSize(conv.size);
-    const warmupClass = conv.isWarmup ? ' warmup-conversation' : '';
-    const warmupBadge = conv.isWarmup ? '<span class="warmup-badge">WARMUP</span>' : '';
+    const specialClass = conv.isWarmup ? ' warmup-conversation' : (conv.isMeta ? ' meta-conversation' : '');
+    const badges = [];
+    if (conv.isWarmup) badges.push('<span class="warmup-badge">WARMUP</span>');
+    if (conv.isMeta) badges.push('<span class="meta-badge">META</span>');
+    const badgesHtml = badges.join('');
     return `
-      <div class="conversation-item${warmupClass}" data-id="${conv.id}" onclick="selectConversation('${conv.id}')">
-        <div class="preview">${warmupBadge}${escapeHtml(conv.preview)}</div>
+      <div class="conversation-item${specialClass}" data-id="${conv.id}" onclick="selectConversation('${conv.id}')">
+        <div class="preview">${badgesHtml}${escapeHtml(conv.preview)}</div>
         <div class="meta">${date} • ${conv.messageCount} msgs • ${size}</div>
       </div>
     `;
@@ -213,11 +220,20 @@ function renderMessageContent(message) {
   return escapeHtml(JSON.stringify(content, null, 2));
 }
 
-// Setup warmup toggle
-function setupWarmupToggle() {
-  const toggle = document.getElementById('warmup-toggle');
-  toggle.addEventListener('change', (e) => {
+// Setup filter toggles
+function setupFilterToggles() {
+  const warmupToggle = document.getElementById('warmup-toggle');
+  const metaToggle = document.getElementById('meta-toggle');
+
+  warmupToggle.addEventListener('change', (e) => {
     showWarmup = e.target.checked;
+    if (currentProject) {
+      selectProject(currentProject);
+    }
+  });
+
+  metaToggle.addEventListener('change', (e) => {
+    showMeta = e.target.checked;
     if (currentProject) {
       selectProject(currentProject);
     }

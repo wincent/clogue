@@ -254,10 +254,10 @@
       border-color: #667eea;
     }
 
-    .warmup-toggle {
+    .filter-toggle {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
       padding: 0.75rem;
       background: #f8f9ff;
       border-radius: 6px;
@@ -266,26 +266,41 @@
       border: 1px solid #e0e0e0;
     }
 
-    .warmup-toggle input[type="checkbox"] {
+    .filter-toggle .filter-label {
+      color: #666;
+      font-weight: 600;
+    }
+
+    .filter-toggle .filter-options {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .filter-toggle .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .filter-toggle input[type="checkbox"] {
       width: 16px;
       height: 16px;
       cursor: pointer;
     }
 
-    .warmup-toggle label {
+    .filter-toggle label {
       cursor: pointer;
       user-select: none;
       color: #666;
     }
 
-    .warmup-conversation {
+    .warmup-conversation, .meta-conversation {
       opacity: 0.7;
       border-style: dashed;
     }
 
-    .warmup-badge {
+    .warmup-badge, .meta-badge {
       display: inline-block;
-      background: #ff9800;
       color: white;
       font-size: 0.65rem;
       font-weight: 700;
@@ -293,6 +308,14 @@
       border-radius: 3px;
       margin-right: 0.5rem;
       letter-spacing: 0.5px;
+    }
+
+    .warmup-badge {
+      background: #ff9800;
+    }
+
+    .meta-badge {
+      background: #9c27b0;
     }
 
     .json-button {
@@ -424,9 +447,18 @@
 
     <div class="panel" id="conversations-panel">
       <h2>Conversations</h2>
-      <div class="warmup-toggle">
-        <input type="checkbox" id="warmup-toggle">
-        <label for="warmup-toggle">Show warmup conversations</label>
+      <div class="filter-toggle">
+        <span class="filter-label">Show:</span>
+        <div class="filter-options">
+          <div class="filter-option">
+            <input type="checkbox" id="warmup-toggle">
+            <label for="warmup-toggle">Warmup</label>
+          </div>
+          <div class="filter-option">
+            <input type="checkbox" id="meta-toggle">
+            <label for="meta-toggle">Meta</label>
+          </div>
+        </div>
       </div>
       <input type="text" class="search-box" id="conversation-search" placeholder="Search conversations...">
       <div id="conversations-list">

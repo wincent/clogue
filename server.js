@@ -138,6 +138,7 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
     const files = await fs.readdir(projectPath);
     const conversations = [];
     const includeWarmup = req.query.includeWarmup === 'true';
+    const includeMeta = req.query.includeMeta === 'true';
 
     for (const file of files) {
       if (file.endsWith('.jsonl')) {
@@ -148,20 +149,29 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
 
         let firstUserMessage = null;
         let isWarmup = false;
+        let isMeta = false;
         let isSidechain = false;
 
-        // First pass: check for sidechain flag and warmup message
+        // First pass: check flags (sidechain anywhere, meta/warmup only on first user message)
+        let foundFirstUserMessage = false;
         for (const line of lines) {
           try {
             const entry = JSON.parse(line);
 
-            // Check for sidechain flag
+            // Check for sidechain flag (anywhere in conversation)
             if (entry.isSidechain === true) {
               isSidechain = true;
             }
 
-            // Look for first user message to check for warmup
-            if (!isWarmup && entry.type === 'user' && entry.message && entry.message.content) {
+            // Look for first user message to check for meta and warmup
+            if (!foundFirstUserMessage && entry.type === 'user' && entry.message && entry.message.content) {
+              foundFirstUserMessage = true;
+
+              // Check for meta flag on first user message only
+              if (entry.isMeta === true) {
+                isMeta = true;
+              }
+
               const content = typeof entry.message.content === 'string'
                 ? entry.message.content
                 : entry.message.content[0]?.text || '';
@@ -176,7 +186,17 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
         }
 
         // Skip warmup conversations unless explicitly requested
-        if ((isWarmup || isSidechain) && !includeWarmup) {
+        if (isWarmup && !includeWarmup) {
+          continue;
+        }
+
+        // Skip meta conversations unless explicitly requested
+        if (isMeta && !includeMeta) {
+          continue;
+        }
+
+        // Skip sidechain conversations unless explicitly requested (treated as warmup)
+        if (isSidechain && !includeWarmup) {
           continue;
         }
 
@@ -206,6 +226,7 @@ app.get('/api/projects/:projectName/conversations', async (req, res) => {
           modified: stats.mtime,
           size: stats.size,
           isWarmup: isWarmup,
+          isMeta: isMeta,
           isSidechain: isSidechain
         });
       }
