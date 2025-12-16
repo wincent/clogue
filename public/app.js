@@ -3,6 +3,7 @@ let currentConversation = null;
 let allProjects = [];
 let allConversations = [];
 let showWarmup = false;
+let currentMessages = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -124,7 +125,9 @@ function renderConversation(messages) {
     return;
   }
 
-  viewer.innerHTML = messages.map(msg => {
+  currentMessages = messages;
+
+  viewer.innerHTML = messages.map((msg, index) => {
     const timestamp = new Date(msg.timestamp).toLocaleString();
     let role = msg.message?.role || msg.type;
 
@@ -136,15 +139,31 @@ function renderConversation(messages) {
       }
     }
 
+    // Build metadata pills
+    const pills = [];
+    if (msg.isMeta) {
+      pills.push('<span class="meta-pill">meta</span>');
+    }
+    if (msg.isSidechain) {
+      pills.push('<span class="meta-pill sidechain">sidechain</span>');
+    }
+    const pillsHtml = pills.length > 0 ? `<div class="meta-pills">${pills.join('')}</div>` : '';
+
     return `
       <div class="message ${role}">
         <div class="message-header">
           <span class="message-role">${role}</span>
           <span class="message-timestamp">${timestamp}</span>
+          <button class="json-button" onclick="showJsonModal(${index})" title="View raw JSON">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+          </button>
         </div>
         <div class="message-content">
           ${renderMessageContent(msg.message)}
         </div>
+        ${pillsHtml}
       </div>
     `;
   }).join('');
@@ -223,6 +242,21 @@ function setupSearchHandlers() {
     );
     renderConversations(filtered);
   });
+}
+
+// JSON Modal functions
+function showJsonModal(messageIndex) {
+  const msg = currentMessages[messageIndex];
+  const modal = document.getElementById('json-modal');
+  const content = document.getElementById('json-content');
+
+  content.textContent = JSON.stringify(msg, null, 2);
+  modal.showModal();
+}
+
+function closeJsonModal() {
+  const modal = document.getElementById('json-modal');
+  modal.close();
 }
 
 // Utility functions
