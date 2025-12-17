@@ -17,24 +17,32 @@ Vibe-coded with Claude, obviously.
   - Tool results
 - Clean, modern interface with syntax highlighting
 
+## Installation
+
+Install globally via npm:
+
+```bash
+npm install -g clogue
+```
+
 ## Usage
 
-1. Start the server:
+Start the server:
+
+```bash
+clogue
+```
+
+Or for local development:
 
 ```bash
 npm start
 ```
 
-2. Open your browser to:
-
-```
-http://localhost:3000
-```
-
-3. Browse your conversations:
-   - Select a project from the left panel
-   - Choose a conversation from the middle panel
-   - View the full conversation in the right panel
+Then open your browser to `http://localhost:3000` and browse your conversations:
+- Select a project from the left panel
+- Choose a conversation from the middle panel
+- View the full conversation in the right panel
 
 ## Project Structure
 
