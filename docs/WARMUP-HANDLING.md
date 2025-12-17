@@ -32,13 +32,13 @@ The UI now includes:
 
 Without warmup (default):
 ```bash
-curl 'http://localhost:3000/api/projects/-Users-greg-hurrell-code-clogue/conversations'
+curl 'http://localhost:3000/api/projects/-path-to-clogue/conversations'
 ```
 Should return ~3 conversations (only real conversations)
 
 With warmup enabled:
 ```bash
-curl 'http://localhost:3000/api/projects/-Users-greg-hurrell-code-clogue/conversations?includeWarmup=true'
+curl 'http://localhost:3000/api/projects/-path-to-clogue/conversations?includeWarmup=true'
 ```
 Should return ~12 conversations (including all agent-*.jsonl files)
 
