@@ -2,6 +2,8 @@
 
 Browser-based tool for exploring Claude conversation history stored in `~/.claude/projects`.
 
+Vibe-coded with Claude, obviously.
+
 ## Features
 
 - Browse all your Claude projects
